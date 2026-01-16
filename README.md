@@ -17,3 +17,9 @@ pip install -r requirements.txt
 # Kali
 apt install tor chromium python3-pip
 pip3 install undetected-chromedriver selenium requests stem
+
+# TOR Shadow (optional)
+sudo apt install tor stem -y && tor &
+
+# RUN SUPERNOVA
+python3 supernova_inst.py
